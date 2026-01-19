@@ -79,7 +79,7 @@ def find_suitable_L(mu, nu, alpha):
     return L
 
 
-def reconstruct_pdf_mle(X_samples, X_precision, gmm_components=3):
+def reconstruct_pdf_mle(X_samples, X_precision, gmm_components):
     """
     MLE methods using Gaussian Mixture Model to reconstruct the pdf from samples.
     """
@@ -112,34 +112,45 @@ def compute_perfect_phi(mu, nu, alpha, t):
     return Nc_2(alpha) * summ
 
 
-def compute_phi_at_t(w_values, X_precision, t=1):
+# def compute_phi_at_t(w_values, X_precision, t=1):
+#     """
+#     Computes the characteristic function φ(t) at t = 1 (by default) using numerical integration.
+#     """
+#     # dx = 2 * L / n
+#     # x_values = np.linspace(-L, L - dx, n)
+
+#     # Compute φ(t)
+#     integrand = w_values * np.exp(1j * X_precision * t)
+#     # phi_t1 = np.sum(integrand) * dx  # Trapezoid or midpoint integration (simple Riemann sum)
+#     phi_t1 = np.trapz(integrand, x=X_precision)  # Trapezoid integration
+#     return phi_t1
+
+
+# def compute_gaussian_phi_at_t_optimal(mu, nu, X_precision, X_samples, w_gaussian_values, t):
+#     """
+#     Computes the Gaussian kernel estimated characteristic function φ(t) at t = 1 (by default) with optimized bandwidth.
+#     """
+
+#     # Compute φ(t)
+#     phi_t1 = compute_phi_at_t(w_gaussian_values, X_precision, t)
+#     # optimal_bd = 2 / (mu**2 + nu**2)  * np.sqrt( - np.log(1 - ( ( 1 - np.abs(phi_t1)**2 ) / 2 / len(X_samples) / np.abs(phi_t1) **2 )))
+#     optimal_bd = 2 / (mu**2 + nu**2) / t * np.sqrt( (1 - np.abs(phi_t1) **2) / ( 2 * len(X_samples) * np.abs(phi_t1) **2) )
+
+#     phi_K = np.exp( - optimal_bd**2 * t**2 * (mu**2 + nu**2) / 4)
+#     phi_nk = 1 / len(X_samples) * np.sum(np.exp(1j * X_samples * t))
+#     phi_t1_optimal = phi_nk * phi_K
+#     return phi_t1_optimal, optimal_bd
+
+
+def compute_t_fourier_transform(w_values, X_precision, t):
     """
-    Computes the characteristic function φ(t) at t = 1 (by default) using numerical integration.
+    Computes the characteristic function φ(t) at given t using numerical integration.
     """
-    # dx = 2 * L / n
-    # x_values = np.linspace(-L, L - dx, n)
 
     # Compute φ(t)
     integrand = w_values * np.exp(1j * X_precision * t)
-    # phi_t1 = np.sum(integrand) * dx  # Trapezoid or midpoint integration (simple Riemann sum)
-    phi_t1 = np.trapz(integrand, x=X_precision)  # Trapezoid integration
-    return phi_t1
-
-
-def compute_gaussian_phi_at_t_optimal(mu, nu, X_precision, X_samples, w_gaussian_values, t):
-    """
-    Computes the Gaussian kernel estimated characteristic function φ(t) at t = 1 (by default) with optimized bandwidth.
-    """
-
-    # Compute φ(t)
-    phi_t1 = compute_phi_at_t(w_gaussian_values, X_precision, t)
-    # optimal_bd = 2 / (mu**2 + nu**2)  * np.sqrt( - np.log(1 - ( ( 1 - np.abs(phi_t1)**2 ) / 2 / len(X_samples) / np.abs(phi_t1) **2 )))
-    optimal_bd = 2 / (mu**2 + nu**2) / t * np.sqrt( (1 - np.abs(phi_t1) **2) / ( 2 * len(X_samples) * np.abs(phi_t1) **2) )
-
-    phi_K = np.exp( - optimal_bd**2 * t**2 * (mu**2 + nu**2) / 4)
-    phi_nk = 1 / len(X_samples) * np.sum(np.exp(1j * X_samples * t))
-    phi_t1_optimal = phi_nk * phi_K
-    return phi_t1_optimal, optimal_bd
+    phi_t = simpson(integrand, x=X_precision)  # Simpson's rule integration
+    return phi_t
 
 
 def true_rho(alpha, Y, Y_prime):
@@ -169,7 +180,7 @@ def true_rho(alpha, Y, Y_prime):
 
 
 
-def rho_max(mu_max, N_mu, kappa, n_precision, alpha, g_list, h_list, n, trial_times = 1, correction = False):
+def rho_max(mu_max, N_mu, kappa, n_precision, alpha, g_list, h_list, n, gmm_components, trial_times = 1, correction = False):
 
 
     mu_list = np.linspace(-mu_max, mu_max, N_mu)
@@ -180,7 +191,6 @@ def rho_max(mu_max, N_mu, kappa, n_precision, alpha, g_list, h_list, n, trial_ti
     for trial in range(trial_times):
 
         for idx_g, g in enumerate(tqdm(g_list)):
-
             phi_t1_over_mu_list = np.zeros(N_mu, dtype=complex)
         
             for idx_mu, mu in enumerate(mu_list):
@@ -191,12 +201,12 @@ def rho_max(mu_max, N_mu, kappa, n_precision, alpha, g_list, h_list, n, trial_ti
                     pdf = normalized_cat_state_pdf(mu, g, alpha, X_precision)
 
                     X_samples = samplings_with_noisy_pdf(pdf, X_precision, n, kappa)
-                    W_Gaussian = reconstruct_pdf_mle(X_samples, X_precision)
+                    W_Gaussian = reconstruct_pdf_mle(X_samples, X_precision, gmm_components)
                     if correction == True:
-                        phi_t1_vals_gaussian, optimal_bd = compute_gaussian_phi_at_t_optimal(mu, g, X_precision, X_samples, W_Gaussian, t = 1 / kappa)
+                        phi_t1_vals_gaussian = compute_t_fourier_transform(W_Gaussian, X_precision, t = 1/kappa)
                         phi_t1_vals_gaussian *= 1 / np.exp( - ((1 - kappa) / kappa)**2 / 2   )
                     else:
-                        phi_t1_vals_gaussian, optimal_bd = compute_gaussian_phi_at_t_optimal(mu, g, X_precision, X_samples, W_Gaussian, t = 1)
+                        phi_t1_vals_gaussian = compute_t_fourier_transform(W_Gaussian, X_precision, t = 1)
 
                 except:
                     phi_t1_vals_gaussian = 1

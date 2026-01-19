@@ -73,7 +73,7 @@ def find_suitable_L(mu, nu, alpha):
     return L
 
 
-def reconstruct_pdf_mle(X_samples, X_precision, gmm_components=3):
+def reconstruct_pdf_mle(X_samples, X_precision, gmm_components):
     """
     MLE methods using Gaussian Mixture Model to reconstruct the pdf from samples.
     """
