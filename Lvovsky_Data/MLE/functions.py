@@ -16,7 +16,7 @@ import os
 def P_x_theta(x, theta, alpha, r2, p = 0.6810463):
 
     tau = np.sqrt(1-r2)
-    beta = np.abs(r2)
+    beta = 1
     W0 = 1 / np.sqrt(np.pi) / beta * np.exp(- x**2 / beta**2)
 
     
