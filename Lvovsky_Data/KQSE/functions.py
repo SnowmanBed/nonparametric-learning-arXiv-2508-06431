@@ -22,7 +22,7 @@ def P_x_theta(x, theta, alpha, r2, p = 0.6810463):
     c0 = tau / (np.sqrt(tau**2 + alpha**2))
     c1 = alpha / (np.sqrt(tau**2 + alpha**2))
     mu = r2 * np.cos(theta)
-    correct_term = (1 - p * c1**2 + 2 * p * c1**2 * x**2 / beta**2 + 2 * np.sqrt(2) * p * c0 * c1 * mu * x / beta)
+    correct_term = (1 - p * c1**2 + 2 * p * c1**2 * x**2 / beta**2 + 2 * np.sqrt(2) * p * c0 * c1 * mu * x / beta**2)
 
     # correct_term = 1
     Px = W0 * correct_term 
